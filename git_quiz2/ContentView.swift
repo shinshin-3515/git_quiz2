@@ -106,6 +106,33 @@ enum AnswerStatus: String, Codable {
     case wrong
 }
 
+enum TextSizeOption: String, CaseIterable, Identifiable {
+    case small
+    case standard
+    case large
+    case extraLarge
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .small: return "小さめ"
+        case .standard: return "標準"
+        case .large: return "大きい"
+        case .extraLarge: return "特大"
+        }
+    }
+
+    var dynamicTypeSize: DynamicTypeSize {
+        switch self {
+        case .small: return .medium
+        case .standard: return .large
+        case .large: return .xLarge
+        case .extraLarge: return .xxLarge
+        }
+    }
+}
+
 // =========================================================
 // MARK: - Notifications
 // =========================================================
@@ -790,7 +817,12 @@ private extension Array {
 
 struct RootView: View {
     @AppStorage("splashDuration") private var splashDuration: Double = 1.2
+    @AppStorage("textSizeOption") private var textSizeRaw: String = TextSizeOption.standard.rawValue
     @State private var showSplash = true
+
+    private var textSizeOption: TextSizeOption {
+        TextSizeOption(rawValue: textSizeRaw) ?? .standard
+    }
 
     var body: some View {
         Group {
@@ -802,6 +834,7 @@ struct RootView: View {
                 }
             }
         }
+        .dynamicTypeSize(textSizeOption.dynamicTypeSize)
         .onAppear {
             DispatchQueue.main.asyncAfter(deadline: .now() + max(0.0, splashDuration)) {
                 withAnimation(.easeInOut) { showSplash = false }
@@ -1587,7 +1620,13 @@ struct SettingsView: View {
     @State private var showConfirmStudyTime = false
 
     @AppStorage("splashDuration") private var splashDuration: Double = 1.2
+    @AppStorage("textSizeOption") private var textSizeRaw: String = TextSizeOption.standard.rawValue
     @AppStorage("isProUnlocked") private var isProUnlocked: Bool = false
+
+    private var textSizeOption: TextSizeOption {
+        get { TextSizeOption(rawValue: textSizeRaw) ?? .standard }
+        set { textSizeRaw = newValue.rawValue }
+    }
 
     var body: some View {
         ZStack {
@@ -1631,6 +1670,23 @@ struct SettingsView: View {
                                 .foregroundStyle(.secondary)
                         }
                         Slider(value: $splashDuration, in: 0.0...5.0, step: 0.1)
+                    }
+                    .padding(.vertical, 6)
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("文字サイズ")
+                        Picker(
+                            "文字サイズ",
+                            selection: Binding(
+                                get: { textSizeOption },
+                                set: { textSizeOption = $0 }
+                            )
+                        ) {
+                            ForEach(TextSizeOption.allCases) { option in
+                                Text(option.label).tag(option)
+                            }
+                        }
+                        .pickerStyle(.segmented)
                     }
                     .padding(.vertical, 6)
                 }
